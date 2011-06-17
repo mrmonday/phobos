@@ -18,7 +18,7 @@ Authors: $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org,
 Andrei Alexandrescu)
 
 Source:    $(PHOBOSSRC std/_string.d)
-     
+
 $(B $(RED IMPORTANT NOTE:)) Beginning with version 2.052, the
 following symbols have been generalized beyond strings and moved to
 different modules. This action was prompted by the fact that
@@ -53,7 +53,7 @@ $(TR $(TD $(D replaceSlice)) $(TD Use $(XREF array, replace) instead.))
 
 $(TR $(TD $(D split)) $(TD Use $(XREF array, split) instead.))
 )
-   
+
 */
 module std.string;
 
@@ -61,8 +61,7 @@ module std.string;
 
 import core.exception : onRangeError;
 import core.vararg, core.stdc.stdio, core.stdc.stdlib,
-    core.stdc.string/*, std.algorithm*/,
-    std.conv, std.ctype, std.encoding, std.exception, std.format,
+    core.stdc.string, std.conv, std.ctype, std.exception, std.format,
     std.functional, std.metastrings, std.range, std.regex, std.stdio,
     std.traits, std.typetuple, std.uni, std.utf;
 public import std.algorithm : startsWith, endsWith, cmp, count;
@@ -131,7 +130,11 @@ $(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
 int icmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
 if (is(Unqual!(ElementType!S1) == dchar) && is(Unqual!(ElementType!S2) == dchar))
 {
-    enum isLessThan = is(pred : string) && pred == "a < b";
+    static if(is(typeof(pred) : string))
+        enum isLessThan = pred == "a < b";
+    else
+        enum isLessThan = false;
+
     foreach (e; zip(s1, s2))
     {
         dchar c1 = toUniLower(e[0]), c2 = toUniLower(e[1]);
@@ -1036,11 +1039,11 @@ unittest
         s2 = capitalize(s1);
         assert(cmp(s2, "Fol") == 0);
         assert(s2 !is s1);
-        
+
         s2 = capitalize(s1[0 .. 2]);
         assert(cmp(s2, "Fo") == 0);
         assert(s2.ptr == s1.ptr);
-        
+
         s1 = to!S("fOl");
         s2 = capitalize(s1);
         assert(cmp(s2, "Fol") == 0);
@@ -1078,7 +1081,7 @@ S capwords(S)(S s) if (isSomeString!S)
                 inword = false;
             }
             break;
-            
+
         default:
             if (!inword)
             {
@@ -1094,7 +1097,7 @@ S capwords(S)(S s) if (isSomeString!S)
     {
         r ~= capitalize(s[istart .. i]);
     }
-    
+
     return cast(S) r;
 }
 
@@ -1363,7 +1366,7 @@ C[] chomp(C)(C[] s)
 }
 
 /// Ditto
-C[] chomp(C, C1)(C[] s, in C1[] delimiter)
+C[] chomp(C, C1)(C[] s, const(C1)[] delimiter)
 {
     if (endsWith(s, delimiter))
     {
@@ -2531,7 +2534,7 @@ S succ(S)(S s) if (isSomeString!S)
         {
             dchar c = s[i];
             dchar carry;
-            
+
             switch (c)
             {
             case '9':
@@ -2646,7 +2649,7 @@ string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[]
         dchar lastt;
         dchar newc;
         int n = 0;
-        
+
         for (size_t i = 0; i < from.length; )
         {
             dchar f = std.utf.decode(from, i);
@@ -3124,7 +3127,7 @@ unittest
  *
  * See_Also:
  *  $(LINK2 http://en.wikipedia.org/wiki/Soundex, Wikipedia),
- *  $(LINK2 http://www.archives.gov/publications/general-info-leaflets/55.html, The Soundex Indexing System)
+ *  $(LUCKY The Soundex Indexing System)
  *
  * Bugs:
  *  Only works well with English names.
