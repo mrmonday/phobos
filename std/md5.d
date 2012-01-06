@@ -34,28 +34,22 @@
 // RSA Data Security, Inc. MD5 Message-Digest Algorithm.
 
 import std.md5;
-
-private import std.stdio;
-private import std.string;
-private import std.c.stdio;
-private import std.c.string;
+import std.stdio;
 
 void main(string[] args)
 {
-    foreach (char[] arg; args)
-         MDFile(arg);
+    foreach (arg; args)
+        mdFile(arg);
 }
 
-/* Digests a file and prints the result. */
-void MDFile(string filename)
+/// Digests a file and prints the result.
+void mdFile(string filename)
 {
-    FILE* file = enforce(fopen(filename), "Could not open file `"~filename~"'");
-    scope(exit) fclose(file);
-    ubyte digest[16];
+    ubyte[16] digest;
 
     MD5_CTX context;
     context.start();
-    foreach (ubyte buffer; chunks(file, 4096 * 1024))
+    foreach (buffer; File(filename).byChunk(4096 * 1024))
         context.update(buffer);
     context.finish(digest);
     writefln("MD5 (%s) = %s", filename, digestToString(digest));
@@ -88,9 +82,10 @@ module std.md5;
 
 //debug=md5;            // uncomment to turn on debugging printf's
 
+import std.ascii;
 import std.string;
 import std.exception;
-import std.c.stdio : printf;
+debug(md5) import std.c.stdio : printf;
 
 /***************************************
  * Computes MD5 digest of several arrays of data.
@@ -127,8 +122,8 @@ string digestToString(in ubyte[16] digest)
 
     foreach (ubyte u; digest)
     {
-        result[i] = std.string.hexdigits[u >> 4];
-        result[i + 1] = std.string.hexdigits[u & 15];
+        result[i] = std.ascii.hexDigits[u >> 4];
+        result[i + 1] = std.ascii.hexDigits[u & 15];
         i += 2;
     }
     return assumeUnique(result);
@@ -148,7 +143,7 @@ string d = getDigestString(a, b, c);
 string getDigestString(in void[][] data...)
 {
     MD5_CTX ctx;
-    ctx.start;
+    ctx.start();
     foreach (datum; data) {
         ctx.update(datum);
     }
@@ -201,20 +196,9 @@ struct MD5_CTX
      */
     static uint ROTATE_LEFT(uint x, uint n)
     {
-        version (X86)
-        {
-            asm
-            {   naked                   ;
-                mov     ECX,EAX         ;
-                mov     EAX,4[ESP]      ;
-                rol     EAX,CL          ;
-                ret     4               ;
-            }
-        }
-        else
-        {
-            return (x << n) | (x >> (32-n));
-        }
+        // With recently added optimization to DMD (commit 32ea0206 at 07/28/11), this is translated to rol.
+        // No assembler required.
+        return (x << n) | (x >> (32-n));
     }
 
     /* FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4.
@@ -297,14 +281,11 @@ struct MD5_CTX
      */
     void finish(ref ubyte[16] digest)         /* message digest */
     {
-      ubyte bits[8];
+      ubyte bits[8] = void;
       uint index, padLen;
-      uint[2] cnt;
 
       /* Save number of bits */
-      cnt[0] = cast(uint)count;
-      cnt[1] = cast(uint)(count >> 32);
-      Encode (bits.ptr, cnt.ptr, 8);
+      Encode (bits.ptr, cast(const uint*) &count, 8);
 
       /* Pad out to 56 mod 64. */
       index = (cast(uint)count >> 3) & (64 - 1);
@@ -345,13 +326,13 @@ struct MD5_CTX
         S44 = 21,
     }
 
-    private void transform (ubyte* /*[64]*/ block)
+    private void transform (const ubyte* /*[64]*/ block)
     {
       uint a = state[0],
            b = state[1],
            c = state[2],
            d = state[3];
-      uint[16] x;
+      uint[16] x = void;
 
       Decode (x.ptr, block, 64);
 
@@ -441,15 +422,18 @@ struct MD5_CTX
      */
     private static void Encode (ubyte *output, const uint *input, uint len)
     {
-        uint i, j;
-
-        for (i = 0, j = 0; j < len; i++, j += 4)
+        version (BigEndian)
         {
-            uint u = input[i];
-            output[j]   = cast(ubyte)(u);
-            output[j+1] = cast(ubyte)(u >> 8);
-            output[j+2] = cast(ubyte)(u >> 16);
-            output[j+3] = cast(ubyte)(u >> 24);
+            uint i, j;
+
+            for (i = 0, j = 0; j < len; i++, j += 4)
+            {
+                *cast(uint *) &output[j] = core.bitop.bswap(input[i]);
+            }
+        }
+        else
+        {
+            (cast(uint *)output)[0..len/4] = input[0..len/4];
         }
     }
 
@@ -458,19 +442,18 @@ struct MD5_CTX
      */
     private static void Decode (uint *output, const ubyte *input, uint len)
     {
-        uint i, j;
-
-        for (i = 0, j = 0; j < len; i++, j += 4)
+        version (BigEndian)
         {
-            version (LittleEndian)
+            uint i, j;
+
+            for (i = 0, j = 0; j < len; i++, j += 4)
             {
-                output[i] = *cast(uint*)&input[j];
+                output[i] = core.bitop.bswap(*cast(uint*)&input[j]);
             }
-            else
-            {
-                output[i] = (cast(uint)input[j]) | ((cast(uint)input[j+1]) << 8) |
-                        ((cast(uint)input[j+2]) << 16) | ((cast(uint)input[j+3]) << 24);
-            }
+        }
+        else
+        {
+            output[0..len/4] = (cast(const uint *)input)[0..len/4];
         }
     }
 }

@@ -1,8 +1,6 @@
 // Written in the D programming language.
 
 /**
- * Boilerplate:
- *      $(std_boilerplate.html)
  * Macros:
  *      WIKI = Phobos/StdOutbuffer
  *
@@ -304,7 +302,7 @@ class OutBuffer
      */
 
     version (X86_64)
-    extern (C) void printf(string format, ...)
+    void printf(string format, ...)
     {
         va_list ap;
         va_start(ap, __va_argsave);

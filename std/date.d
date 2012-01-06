@@ -1,7 +1,8 @@
 // Written in the D programming language.
 
 /**
- * $(RED Scheduled for deprecation. Please use std.datetime instead.)
+ * $(RED Deprecated. It will be removed in February 2012.
+ *       Please use std.datetime instead.)
  *
  * Dates are represented in several formats. The date implementation
  * revolves around a central type, $(D d_time), from which other
@@ -28,8 +29,11 @@ module std.date;
 import std.conv, std.datebase, std.dateparse, std.exception, std.stdio;
 import std.c.stdlib;
 
-pragma(msg, "std.date and std.dateparse have been scheduled for deprecation. "
+pragma(msg, "Notice: As of Phobos 2.055, std.date and std.dateparse have been " ~
+            "deprecated. They will be removed in February 2012. " ~
             "Please use std.datetime instead.");
+
+deprecated:
 
 /**
  * $(D d_time) is a signed arithmetic type giving the time elapsed
@@ -861,7 +865,7 @@ version (Win32)
 
     unittest
     {
-        auto dt = getUTCtime;
+        auto dt = getUTCtime();
         auto ft = d_time2FILETIME(dt);
         auto dt1 = FILETIME2d_time(&ft);
         assert(dt == dt1, text(dt, " != ", dt1));
@@ -1087,7 +1091,7 @@ version (Posix)
 /***
  * Type representing the DOS file date/time format.
  */
-typedef uint DosFileTime;
+alias uint DosFileTime;
 
 /************************************
  * Convert from DOS file date/time to d_time.
@@ -1187,12 +1191,12 @@ ulong[] benchmark(fun...)(uint times, ulong[] result = null)
     result.length = 0;
     foreach (i, Unused; fun)
     {
-        immutable t = getUTCtime;
+        immutable t = getUTCtime();
         foreach (j; 0 .. times)
         {
             fun[i]();
         }
-        immutable delta = getUTCtime - t;
+        immutable delta = getUTCtime() - t;
         result ~= cast(uint)delta;
     }
     foreach (ref e; result)

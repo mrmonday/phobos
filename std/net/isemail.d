@@ -24,8 +24,10 @@
  */
 module std.net.isemail;
 
-import std.algorithm : ElementType, equal, uniq, filter, contains = canFind;
+import std.algorithm : equal, uniq, filter, contains = canFind;
+import std.range : ElementType;
 import std.array;
+import std.ascii;
 import std.conv;
 import std.exception : enforce;
 import std.regex;
@@ -101,7 +103,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
     auto endOrDie = false;
     auto crlfCount = int.min; // int.min == not defined
 
-    foreach (i, e ; email)
+    foreach (ref i, e ; email)
     {
         token = email.get(i, e);
 
@@ -596,7 +598,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                     case Token.cr:
                     case Token.space:
                     case Token.tab:
-                        if (token == Token.cr && (i++ == email.length || email.get(i, e) != Token.lf))
+                        if (token == Token.cr && (++i == email.length || email.get(i, e) != Token.lf))
                         {
                             returnStatus ~= EmailStatusCode.errorCrNoLf;
                             break;
@@ -735,7 +737,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
     auto finalStatus = returnStatus.max;
 
     if (returnStatus.length != 1)
-        returnStatus.popFront;
+        returnStatus.popFront();
 
     parseData[EmailPart.status] = to!(tstring)(returnStatus);
 
@@ -1128,6 +1130,9 @@ unittest
     assert("(\u000D)test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
         `No LF after the CR`);
 
+    assert("(\u000D".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
+        `No LF after the CR`);
+
     assert("test@iana.org(\u000D)".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
         `No LF after the CR`);
 
@@ -1273,31 +1278,31 @@ struct EmailStatus
     }
 
     /// Indicates if the email address is valid or not.
-    bool valid ()
+    @property bool valid ()
     {
         return valid_;
     }
 
     /// The local part of the email address, that is, the part before the @ sign.
-    string localPart ()
+    @property string localPart ()
     {
         return localPart_;
     }
 
     /// The domain part of the email address, that is, the part after the @ sign.
-    string domainPart ()
+    @property string domainPart ()
     {
         return domainPart_;
     }
 
     /// The email status code
-    EmailStatusCode statusCode ()
+    @property EmailStatusCode statusCode ()
     {
         return statusCode_;
     }
 
     /// Returns a describing string of the status code
-    string status ()
+    @property string status ()
     {
         return statusCodeDescription(statusCode_);
     }
@@ -2047,10 +2052,10 @@ sizediff_t lastIndexOf(Char1, Char2)(in Char1[] s, const(Char2)[] sub,
             return std.string.lastIndexOf(s, c, cs);
         if (c <= 0x7F)
         {
-            c = std.ctype.tolower(c);
+            c = std.ascii.toLower(c);
             for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
             {
-                if (std.ctype.tolower(s[i]) == c)
+                if (std.ascii.toLower(s[i]) == c)
                 {
                     if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
                         return i;

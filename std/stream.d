@@ -73,6 +73,7 @@ enum SeekPos {
 
 private {
   import std.conv;
+  import std.ascii;
   import std.format;
   import std.system;    // for Endian enumeration
   import std.utf;
@@ -234,7 +235,7 @@ interface InputStream {
   int readf(...); /// ditto
 
   /// Retrieve the number of bytes available for immediate reading.
-  size_t available();
+  @property size_t available();
 
   /***
    * Return whether the current file position is the same as the end of the
@@ -247,7 +248,7 @@ interface InputStream {
 
   bool eof();
 
-  bool isOpen();        /// Return true if the stream is currently open.
+  @property bool isOpen();        /// Return true if the stream is currently open.
 }
 
 /// Interface for writable streams.
@@ -353,7 +354,7 @@ interface OutputStream {
 
   void flush(); /// Flush pending output if appropriate.
   void close(); /// Close the stream, flushing output if appropriate.
-  bool isOpen(); /// Return true if the stream is currently open.
+  @property bool isOpen(); /// Return true if the stream is currently open.
 }
 
 
@@ -730,7 +731,7 @@ class Stream : InputStream, OutputStream {
         }
         // read field width
         int width = 0;
-        while (isdigit(fmt[i])) {
+        while (isDigit(fmt[i])) {
           width = width * 10 + (fmt[i] - '0');
           i++;
         }
@@ -752,7 +753,7 @@ class Stream : InputStream, OutputStream {
         case 'i':
         case 'I':
           {
-            while (iswhite(c)) {
+            while (isWhite(c)) {
               c = getc();
               count++;
             }
@@ -786,7 +787,7 @@ class Stream : InputStream, OutputStream {
             {
                 case 'd':       // decimal
                 case 'u': {
-                  while (isdigit(c) && width) {
+                  while (isDigit(c) && width) {
                     n = n * 10 + (c - '0');
                     width--;
                     c = getc();
@@ -795,7 +796,7 @@ class Stream : InputStream, OutputStream {
                 } break;
 
                 case 'o': {     // octal
-                  while (isoctdigit(c) && width) {
+                  while (isOctalDigit(c) && width) {
                     n = n * 8 + (c - '0');
                     width--;
                     c = getc();
@@ -804,9 +805,9 @@ class Stream : InputStream, OutputStream {
                 } break;
 
                 case 'x': {     // hexadecimal
-                  while (ishexdigit(c) && width) {
+                  while (isHexDigit(c) && width) {
                     n *= 0x10;
-                    if (isdigit(c))
+                    if (isDigit(c))
                       n += c - '0';
                     else
                       n += 0xA + (c | 0x20) - 'a';
@@ -857,7 +858,7 @@ class Stream : InputStream, OutputStream {
         case 'g':
         case 'G':
           {
-            while (iswhite(c)) {
+            while (isWhite(c)) {
               c = getc();
               count++;
             }
@@ -871,7 +872,7 @@ class Stream : InputStream, OutputStream {
               count++;
             }
             real n = 0;
-            while (isdigit(c) && width) {
+            while (isDigit(c) && width) {
               n = n * 10 + (c - '0');
               width--;
               c = getc();
@@ -882,7 +883,7 @@ class Stream : InputStream, OutputStream {
               c = getc();
               count++;
               double frac = 1;
-              while (isdigit(c) && width) {
+              while (isDigit(c) && width) {
                 n = n * 10 + (c - '0');
                 frac *= 10;
                 width--;
@@ -908,7 +909,7 @@ class Stream : InputStream, OutputStream {
                   count++;
                 }
                 real exp = 0;
-                while (isdigit(c) && width) {
+                while (isDigit(c) && width) {
                   exp = exp * 10 + (c - '0');
                   width--;
                   c = getc();
@@ -940,7 +941,7 @@ class Stream : InputStream, OutputStream {
           } break;
 
         case 's': {     // string
-          while (iswhite(c)) {
+          while (isWhite(c)) {
             c = getc();
             count++;
           }
@@ -951,7 +952,7 @@ class Stream : InputStream, OutputStream {
             p = va_arg!(char[]*)(args);
             s = *p;
           }
-          while (!iswhite(c) && c != char.init) {
+          while (!isWhite(c) && c != char.init) {
             if (strlen < s.length) {
               s[strlen] = c;
             } else {
@@ -984,7 +985,7 @@ class Stream : InputStream, OutputStream {
           if (width < 0)
             width = 1;
           else
-            while (iswhite(c)) {
+            while (isWhite(c)) {
             c = getc();
             count++;
           }
@@ -1007,8 +1008,8 @@ class Stream : InputStream, OutputStream {
         default:        // read character as is
           goto nws;
         }
-      } else if (iswhite(fmt[i])) {     // skip whitespace
-        while (iswhite(c))
+      } else if (isWhite(fmt[i])) {     // skip whitespace
+        while (isWhite(c))
           c = getc();
         i++;
       } else {  // read character as is
@@ -1028,7 +1029,7 @@ class Stream : InputStream, OutputStream {
   }
 
   // returns estimated number of bytes available for immediate reading
-  size_t available() { return 0; }
+  @property size_t available() { return 0; }
 
   /***
    * Write up to size bytes from buffer in the stream, returning the actual
@@ -1197,9 +1198,9 @@ class Stream : InputStream, OutputStream {
    */
   void copyFrom(Stream s) {
     if (seekable) {
-      ulong pos = s.position();
+      ulong pos = s.position;
       s.position(0);
-      copyFrom(s, s.size());
+      copyFrom(s, s.size);
       s.position(pos);
     } else {
       ubyte[128] buf;
@@ -1245,37 +1246,37 @@ class Stream : InputStream, OutputStream {
   /***
    * Sets file position. Equivalent to calling seek(pos, SeekPos.Set).
    */
-  void position(ulong pos) { seek(cast(long)pos, SeekPos.Set); }
+  @property void position(ulong pos) { seek(cast(long)pos, SeekPos.Set); }
 
   /***
    * Returns current file position. Equivalent to seek(0, SeekPos.Current).
    */
-  ulong position() { return seek(0, SeekPos.Current); }
+  @property ulong position() { return seek(0, SeekPos.Current); }
 
   /***
    * Retrieve the size of the stream in bytes.
    * The stream must be seekable or a SeekException is thrown.
    */
-  ulong size() {
+  @property ulong size() {
     assertSeekable();
-    ulong pos = position(), result = seek(0, SeekPos.End);
+    ulong pos = position, result = seek(0, SeekPos.End);
     position(pos);
     return result;
   }
 
   // returns true if end of stream is reached, false otherwise
-  bool eof() {
+  @property bool eof() {
     // for unseekable streams we only know the end when we read it
     if (readEOF && !ungetAvailable())
       return true;
     else if (seekable)
-      return position() == size();
+      return position == size;
     else
       return false;
   }
 
   // returns true if the stream is open
-  bool isOpen() { return isopen; }
+  @property bool isOpen() { return isopen; }
 
   // flush the buffer if writeable
   void flush() {
@@ -1303,9 +1304,9 @@ class Stream : InputStream, OutputStream {
     size_t blockSize;
     char[] result;
     if (seekable) {
-      ulong orig_pos = position();
+      ulong orig_pos = position;
       position(0);
-      blockSize = cast(size_t)size();
+      blockSize = cast(size_t)size;
       result = new char[blockSize];
       while (blockSize > 0) {
         rdlen = readBlock(&result[pos], blockSize);
@@ -1332,10 +1333,10 @@ class Stream : InputStream, OutputStream {
   override size_t toHash() {
     if (!readable || !seekable)
       return super.toHash();
-    ulong pos = position();
+    ulong pos = position;
     uint crc = init_crc32 ();
     position(0);
-    ulong len = size();
+    ulong len = size;
     for (ulong i = 0; i < len; i++) {
       ubyte c;
       read(c);
@@ -1418,7 +1419,7 @@ class FilterStream : Stream {
       readable = s.readable;
       writeable = s.writeable;
       seekable = s.seekable;
-      isopen = s.isOpen();
+      isopen = s.isOpen;
     } else {
       readable = writeable = seekable = false;
       isopen = false;
@@ -1453,7 +1454,7 @@ class FilterStream : Stream {
     return s.seek(offset,whence);
   }
 
-  override size_t available () { return s.available(); }
+  override @property size_t available() { return s.available; }
   override void flush() { super.flush(); s.flush(); }
 }
 
@@ -1743,13 +1744,13 @@ class BufferedStream : FilterStream {
   }
 
   // returns size of stream
-  override ulong size() {
+  override @property ulong size() {
     if (bufferDirty) flush();
-    return s.size();
+    return s.size;
   }
 
   // returns estimated number of bytes available for immediate reading
-  override size_t available() {
+  override @property size_t available() {
     return bufferLen - bufferCurPos;
   }
 }
@@ -1942,7 +1943,7 @@ class File: Stream {
 
   version (Win32) {
     // returns size of stream
-    override ulong size() {
+    override @property ulong size() {
       assertSeekable();
       uint sizehi;
       uint sizelow = GetFileSize(hFile,&sizehi);
@@ -1953,7 +1954,9 @@ class File: Stream {
   override size_t readBlock(void* buffer, size_t size) {
     assertReadable();
     version (Win32) {
-      ReadFile(hFile, buffer, size, &size, null);
+	  auto dwSize = to!DWORD(size);
+      ReadFile(hFile, buffer, dwSize, &dwSize, null);
+	  size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.read(hFile, buffer, size);
       if (size == -1)
@@ -1966,7 +1969,9 @@ class File: Stream {
   override size_t writeBlock(const void* buffer, size_t size) {
     assertWriteable();
     version (Win32) {
-      WriteFile(hFile, buffer, size, &size, null);
+	  auto dwSize = to!DWORD(size);
+      WriteFile(hFile, buffer, dwSize, &dwSize, null);
+	  size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.write(hFile, buffer, size);
       if (size == -1)
@@ -1997,7 +2002,7 @@ class File: Stream {
    * otherwise returns 0.
    */
 
-  override size_t available() {
+  override @property size_t available() {
     if (seekable) {
       ulong lavail = size - position;
       if (lavail > size_t.max) lavail = size_t.max;
@@ -2022,9 +2027,9 @@ class File: Stream {
     file.write(i);
     // string#1 + string#2 + int should give exacly that
     version (Win32)
-      assert(file.position() == 19 + 13 + 4);
+      assert(file.position == 19 + 13 + 4);
     version (Posix)
-      assert(file.position() == 18 + 13 + 4);
+      assert(file.position == 18 + 13 + 4);
     // we must be at the end of file
     assert(file.eof());
     file.close();
@@ -2042,17 +2047,17 @@ class File: Stream {
     // jump over "Hello, "
     file.seek(7, SeekPos.Current);
     version (Win32)
-      assert(file.position() == 19 + 7);
+      assert(file.position == 19 + 7);
     version (Posix)
-      assert(file.position() == 18 + 7);
+      assert(file.position == 18 + 7);
     assert(!std.string.cmp(file.readString(6), "world!"));
     i = 0; file.read(i);
     assert(i == 666);
     // string#1 + string#2 + int should give exacly that
     version (Win32)
-      assert(file.position() == 19 + 13 + 4);
+      assert(file.position == 19 + 13 + 4);
     version (Posix)
-      assert(file.position() == 18 + 13 + 4);
+      assert(file.position == 18 + 13 + 4);
     // we must be at the end of file
     assert(file.eof());
     file.close();
@@ -2139,37 +2144,37 @@ class BufferedFile: BufferedStream {
     file.write(i);
     // string#1 + string#2 + int should give exacly that
     version (Win32)
-      assert(file.position() == 19 + 13 + 4);
+      assert(file.position == 19 + 13 + 4);
     version (Posix)
-      assert(file.position() == 18 + 13 + 4);
+      assert(file.position == 18 + 13 + 4);
     // we must be at the end of file
     assert(file.eof());
-    long oldsize = cast(long)file.size();
+    long oldsize = cast(long)file.size;
     file.close();
     // no operations are allowed when file is closed
     assert(!file.readable && !file.writeable && !file.seekable);
     file.open("stream.$$$");
     // should be ok to read
     assert(file.readable);
-    // test getc/ungetc and size()
+    // test getc/ungetc and size
     char c1 = file.getc();
     file.ungetc(c1);
-    assert( file.size() == oldsize );
+    assert( file.size == oldsize );
     assert(!std.string.cmp(file.readLine(), "Testing stream.d:"));
     // jump over "Hello, "
     file.seek(7, SeekPos.Current);
     version (Win32)
-      assert(file.position() == 19 + 7);
+      assert(file.position == 19 + 7);
     version (Posix)
-      assert(file.position() == 18 + 7);
+      assert(file.position == 18 + 7);
     assert(!std.string.cmp(file.readString(6), "world!"));
     i = 0; file.read(i);
     assert(i == 666);
     // string#1 + string#2 + int should give exacly that
     version (Win32)
-      assert(file.position() == 19 + 13 + 4);
+      assert(file.position == 19 + 13 + 4);
     version (Posix)
-      assert(file.position() == 18 + 13 + 4);
+      assert(file.position == 18 + 13 + 4);
     // we must be at the end of file
     assert(file.eof());
     file.close();
@@ -2190,8 +2195,8 @@ enum BOM {
 private enum int NBOMS = 5;
 immutable Endian[NBOMS] BOMEndian =
 [ std.system.endian,
-  Endian.LittleEndian, Endian.BigEndian,
-  Endian.LittleEndian, Endian.BigEndian
+  Endian.littleEndian, Endian.bigEndian,
+  Endian.littleEndian, Endian.bigEndian
   ];
 
 immutable ubyte[][NBOMS] ByteOrderMarks =
@@ -2415,12 +2420,12 @@ class EndianStream : FilterStream {
   }
 
   override bool eof() { return s.eof() && !ungetAvailable();  }
-  override ulong size() { return s.size();  }
+  override @property ulong size() { return s.size;  }
 
   unittest {
     MemoryStream m;
     m = new MemoryStream ();
-    EndianStream em = new EndianStream(m,Endian.BigEndian);
+    EndianStream em = new EndianStream(m,Endian.bigEndian);
     uint x = 0x11223344;
     em.write(x);
     assert( m.data[0] == 0x11 );
@@ -2435,7 +2440,7 @@ class EndianStream : FilterStream {
     em.position(0);
     static ubyte[12] x3 = [1,2,3,4,5,6,7,8,9,10,11,12];
     em.fixBO(x3.ptr,12);
-    if (std.system.endian == Endian.LittleEndian) {
+    if (std.system.endian == Endian.littleEndian) {
       assert( x3[0] == 12 );
       assert( x3[1] == 11 );
       assert( x3[2] == 10 );
@@ -2447,7 +2452,7 @@ class EndianStream : FilterStream {
       assert( x3[10] == 2 );
       assert( x3[11] == 1 );
     }
-    em.endian = Endian.LittleEndian;
+    em.endian = Endian.littleEndian;
     em.write(x);
     assert( m.data[0] == 0x44 );
     assert( m.data[1] == 0x33 );
@@ -2459,7 +2464,7 @@ class EndianStream : FilterStream {
     assert( m.data[1] == 0x55 );
     em.position(0);
     em.fixBO(x3.ptr,12);
-    if (std.system.endian == Endian.BigEndian) {
+    if (std.system.endian == Endian.bigEndian) {
       assert( x3[0] == 12 );
       assert( x3[1] == 11 );
       assert( x3[2] == 10 );
@@ -2472,15 +2477,15 @@ class EndianStream : FilterStream {
       assert( x3[11] == 1 );
     }
     em.writeBOM(BOM.UTF8);
-    assert( m.position() == 3 );
+    assert( m.position == 3 );
     assert( m.data[0] == 0xEF );
     assert( m.data[1] == 0xBB );
     assert( m.data[2] == 0xBF );
     em.writeString ("Hello, world");
     em.position(0);
-    assert( m.position() == 0 );
-    assert( em.readBOM == BOM.UTF8 );
-    assert( m.position() == 3 );
+    assert( m.position == 0 );
+    assert( em.readBOM() == BOM.UTF8 );
+    assert( m.position == 3 );
     assert( em.getc() == 'H' );
     em.position(0);
     em.writeBOM(BOM.UTF16BE);
@@ -2493,7 +2498,7 @@ class EndianStream : FilterStream {
     em.position(0);
     em.writeString ("Hello, world");
     em.position(0);
-    assert( em.readBOM == -1 );
+    assert( em.readBOM() == -1 );
     assert( em.getc() == 'H' );
     assert( em.getc() == 'e' );
     assert( em.getc() == 'l' );
@@ -2576,10 +2581,10 @@ class TArrayStream(Buffer): Stream {
     return cur;
   }
 
-  override size_t available () { return cast(size_t)(len - cur); }
+  override @property size_t available () { return cast(size_t)(len - cur); }
 
   /// Get the current memory data in total.
-  ubyte[] data() {
+  @property ubyte[] data() {
     if (len > size_t.max)
       throw new StreamException("Stream too big");
     const(void)[] res = buf[0 .. cast(size_t)len];
@@ -2588,7 +2593,7 @@ class TArrayStream(Buffer): Stream {
 
   override string toString() {
       // assume data is UTF8
-      return to!(string)(cast(char[]) data);
+      return to!(string)(cast(char[])data);
   }
 }
 
@@ -2608,14 +2613,14 @@ unittest {
   assert (m.available == 96);
   assert (m.seekEnd (-8) == 92);
   assert (m.available == 8);
-  assert (m.size () == 100);
+  assert (m.size == 100);
   assert (m.seekSet (4) == 4);
   assert (m.readString (4) == "o, w");
   m.writeString ("ie");
   assert (buf[0..12] == "Hello, wield");
   assert (m.position == 10);
   assert (m.available == 90);
-  assert (m.size () == 100);
+  assert (m.size == 100);
 }
 
 /// This subclass reads and constructs an array of bytes in memory.
@@ -2657,7 +2662,7 @@ class MemoryStream: TArrayStream!(ubyte[]) {
     assert (m.available == 8);
     assert (m.seekEnd (-8) == 4);
     assert (m.available == 8);
-    assert (m.size () == 12);
+    assert (m.size == 12);
     assert (m.readString (4) == "o, w");
     m.writeString ("ie");
     assert (cast(char[]) m.data () == "Hello, wield");
@@ -2670,7 +2675,7 @@ class MemoryStream: TArrayStream!(ubyte[]) {
     m.position = 0;
     assert (m.available == 42);
     m.writef("%d %d %s",100,345,"hello");
-    auto str = m.toString;
+    auto str = m.toString();
     assert (str[0..13] == "100 345 hello", str[0 .. 13]);
     assert (m.available == 29);
     assert (m.position == 13);
@@ -2680,12 +2685,12 @@ class MemoryStream: TArrayStream!(ubyte[]) {
     m2 = new MemoryStream ();
     m2.writeString("before");
     m2.copyFrom(m,10);
-    str = m2.toString;
+    str = m2.toString();
     assert (str[0..16] == "before 345 hello");
     m2.position = 3;
     m2.copyFrom(m);
-    auto str2 = m.toString;
-    str = m2.toString;
+    auto str2 = m.toString();
+    str = m2.toString();
     assert (str == ("bef" ~ str2));
   }
 }
@@ -2701,8 +2706,8 @@ class MmFileStream : TArrayStream!(MmFile) {
   /// Create stream wrapper for file.
   this(MmFile file) {
     super (file);
-    MmFile.Mode mode = file.mode;
-    writeable = mode > MmFile.Mode.Read;
+    MmFile.Mode mode = file.mode();
+    writeable = mode > MmFile.Mode.read;
   }
 
   override void flush() {
@@ -2722,7 +2727,7 @@ class MmFileStream : TArrayStream!(MmFile) {
 }
 
 unittest {
-  MmFile mf = new MmFile("testing.txt",MmFile.Mode.ReadWriteNew,100,null);
+  MmFile mf = new MmFile("testing.txt",MmFile.Mode.readWriteNew,100,null);
   MmFileStream m;
   m = new MmFileStream (mf);
   m.writeString ("Hello, world");
@@ -2730,7 +2735,7 @@ unittest {
   assert (m.seekSet (0) == 0);
   assert (m.seekCur (4) == 4);
   assert (m.seekEnd (-8) == 92);
-  assert (m.size () == 100);
+  assert (m.size == 100);
   assert (m.seekSet (4));
   assert (m.readString (4) == "o, w");
   m.writeString ("ie");
@@ -2778,7 +2783,7 @@ class SliceStream : FilterStream {
    */
   this (Stream s, ulong low)
   in {
-    assert (low <= s.size ());
+    assert (low <= s.size);
   }
   body {
     super(s);
@@ -2796,7 +2801,7 @@ class SliceStream : FilterStream {
   this (Stream s, ulong low, ulong high)
   in {
     assert (low <= high);
-    assert (high <= s.size ());
+    assert (high <= s.size);
   }
   body {
     super(s);
@@ -2876,7 +2881,7 @@ class SliceStream : FilterStream {
     return pos;
   }
 
-  override size_t available () {
+  override @property size_t available() {
     size_t res = s.available;
     ulong bp = s.position;
     if (bp <= pos+low && pos+low <= bp+res) {
@@ -2894,7 +2899,7 @@ class SliceStream : FilterStream {
 
     m = new MemoryStream ((cast(char[])"Hello, world").dup);
     s = new SliceStream (m, 4, 8);
-    assert (s.size () == 4);
+    assert (s.size == 4);
     assert (m.position () == 0);
     assert (s.position () == 0);
     assert (m.available == 12);
@@ -2920,7 +2925,7 @@ class SliceStream : FilterStream {
     assert (s.available == 0);
 
     s = new SliceStream (m, 4);
-    assert (s.size () == 14);
+    assert (s.size == 14);
     assert (s.toString () == "Vrooorld\nBlaho");
     s.seekEnd (0);
     assert (s.available == 0);
@@ -2928,26 +2933,9 @@ class SliceStream : FilterStream {
     s.writeString (", etcetera.");
     assert (s.position () == 25);
     assert (s.seekSet (0) == 0);
-    assert (s.size () == 25);
+    assert (s.size == 25);
     assert (m.position () == 18);
-    assert (m.size () == 29);
+    assert (m.size == 29);
     assert (m.toString() == "HellVrooorld\nBlaho, etcetera.");
   }
-}
-
-// helper functions
-private bool iswhite(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-
-private bool isdigit(char c) {
-  return c >= '0' && c <= '9';
-}
-
-private bool isoctdigit(char c) {
-  return c >= '0' && c <= '7';
-}
-
-private bool ishexdigit(char c) {
-  return isdigit(c) || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
 }
